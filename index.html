@@ -491,7 +491,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   // ── URL DEL APPS SCRIPT (reemplazar después de desplegar) ────────────────
-  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbws85uSAFqytT6dYLCux1gWEzgLAVM28vM9dTEKXfQPnCewYJs2Z776cijOv_AZVI8/exec';
+  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz19KeOa6IcMIFNv2FoNkLozeuR92KT92Z8lA0hDVYmU4dEw3ncuuzpDnsWsErjy8s/exec';
 
   const STORE_KEY = 'magna_refacciones_v2';
   let records = [];
@@ -608,53 +608,82 @@
   }
   function markErr(id) { document.getElementById(id).classList.add('error'); }
 
-  // ── GUARDAR ──────────────────────────────────────────────────────────────
-  async function guardar() {
+  // ── GUARDAR (JSONP — sin problemas de CORS) ──────────────────────────────
+  function guardar() {
     const d    = getForm();
     const errs = validate(d);
     if (errs.length) { showToast('⚠ Falta: ' + errs.join(', '), 'red'); return; }
 
-    // Deshabilitar botón mientras se guarda
     const btnGuardar = document.querySelector('.btn-save');
     btnGuardar.disabled = true;
     btnGuardar.textContent = '⏳ Guardando…';
+    showToast('⏳ Conectando con Google Sheets…');
 
-    try {
-      showToast('⏳ Conectando con Google Sheets…');
+    // Nombre único de callback para esta petición
+    const cbName = 'cb_' + Date.now();
 
-      const resp = await fetch(SHEETS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(d)
-      });
+    // Timeout de seguridad — si en 12 s no responde, guardamos local
+    const timer = setTimeout(() => {
+      cleanup();
+      const folioLocal = 'LOCAL-' + Date.now();
+      d.folio = folioLocal;
+      guardarLocal(d);
+      showToast('⚠ Sin respuesta del servidor — guardado local', 'red');
+      btnGuardar.disabled = false;
+      btnGuardar.textContent = '💾 Guardar solicitud';
+    }, 12000);
 
-      const json = await resp.json();
+    // Función que Apps Script llama con la respuesta
+    window[cbName] = function(resp) {
+      cleanup();
+      clearTimeout(timer);
+      btnGuardar.disabled = false;
+      btnGuardar.textContent = '💾 Guardar solicitud';
 
-      if (json.status === 'ok') {
-        // El folio viene del servidor — único y global
-        d.folio = json.folio;
-        records.push(d);
-        try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
-
+      if (resp && resp.status === 'ok') {
+        d.folio = resp.folio;
+        guardarLocal(d);
         showToast('✓ Solicitud ' + d.folio + ' guardada en Google Sheets', 'green');
         renderHistorial();
         setTimeout(() => { resetForm(); }, 1200);
       } else {
-        throw new Error(json.mensaje || 'Error desconocido');
+        const folioLocal = 'LOCAL-' + Date.now();
+        d.folio = folioLocal;
+        guardarLocal(d);
+        showToast('⚠ Error del servidor — guardado local', 'red');
+        renderHistorial();
       }
+    };
 
-    } catch(err) {
-      // Si el servidor falla, guardar local con folio temporal para no perder el dato
+    // Inyectar <script> con la petición JSONP
+    const script = document.createElement('script');
+    script.id  = 'jsonp_' + cbName;
+    script.src = SHEETS_URL
+      + '?callback=' + cbName
+      + '&data=' + encodeURIComponent(JSON.stringify(d));
+    script.onerror = function() {
+      cleanup();
+      clearTimeout(timer);
       const folioLocal = 'LOCAL-' + Date.now();
       d.folio = folioLocal;
-      records.push(d);
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
-      showToast('⚠ Sin conexión — guardado local (' + folioLocal + ')', 'red');
+      guardarLocal(d);
+      showToast('⚠ Sin conexión — guardado local', 'red');
       renderHistorial();
-    } finally {
       btnGuardar.disabled = false;
       btnGuardar.textContent = '💾 Guardar solicitud';
+    };
+    document.body.appendChild(script);
+
+    function cleanup() {
+      const el = document.getElementById('jsonp_' + cbName);
+      if (el) el.remove();
+      delete window[cbName];
     }
+  }
+
+  function guardarLocal(d) {
+    records.push(d);
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
   }
 
   // ── EXPORT EXCEL ─────────────────────────────────────────────────────────
