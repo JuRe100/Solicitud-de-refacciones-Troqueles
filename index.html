@@ -586,16 +586,34 @@
   function markErr(id) { document.getElementById(id).classList.add('error'); }
 
   // ── GUARDAR ──────────────────────────────────────────────────────────────
-  function guardar() {
-    const d = getForm();
-    const errs = validate(d);
-    if (errs.length) { showToast('⚠ Falta: ' + errs.join(', '), 'red'); return; }
-    records.push(d);
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
-    showToast('✓ Solicitud ' + d.folio + ' guardada', 'green');
-    renderHistorial();
-    setTimeout(() => { resetForm(); }, 900);
+  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzQS1xQg9dqH5VjKK0kYDt6yk4gmNOzuIB0sMyzSKdf8ede9kJ8sxx-SiWXhNnPV1w/exec';
+
+async function guardar() {
+  const d = getForm();
+  const errs = validate(d);
+  if (errs.length) { showToast('⚠ Falta: ' + errs.join(', '), 'red'); return; }
+
+  // Guardar local (como antes)
+  records.push(d);
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
+
+  // Enviar a Google Sheets
+  try {
+    showToast('⏳ Guardando en la nube…');
+    await fetch(SHEETS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(d)
+    });
+    showToast('✓ Solicitud ' + d.folio + ' guardada en Sheets', 'green');
+  } catch(err) {
+    showToast('⚠ Guardado local OK, pero falló la nube', 'red');
   }
+
+  renderHistorial();
+  setTimeout(() => { resetForm(); }, 900);
+}
 
   // ── EXPORT EXCEL ─────────────────────────────────────────────────────────
   function flatRows(recs) {
