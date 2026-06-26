@@ -144,11 +144,14 @@
     padding: 7px 9px;
     border-radius: 7px;
   }
-  .parts-table .col-desc  { width: 35%; }
-  .parts-table .col-cant  { width: 9%; }
-  .parts-table .col-num   { width: 20%; }
-  .parts-table .col-uni   { width: 14%; }
-  .parts-table .col-del   { width: 7%; text-align: center; }
+  .parts-table .col-desc     { width: 28%; }
+  .parts-table .col-cant     { width: 7%; }
+  .parts-table .col-num      { width: 15%; }
+  .parts-table .col-uni      { width: 10%; }
+  .parts-table .col-mro-yn  { width: 10%; }
+  .parts-table .col-mro      { width: 13%; }
+  .parts-table .col-alta-mro { width: 10%; }
+  .parts-table .col-del      { width: 7%; text-align: center; }
 
   .btn-del {
     background: #fff0f0;
@@ -292,7 +295,7 @@
     .folio-badge { margin-left: 0; width: 100%; text-align: center; }
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
     .full { grid-column: 1; }
-    .parts-table .col-num { display: none; }
+    .parts-table .col-num, .parts-table .col-mro-yn, .parts-table .col-mro, .parts-table .col-alta-mro { display: none; }
     .parts-table th:nth-child(3), .parts-table td:nth-child(3) { display: none; }
     .actions { flex-direction: column; }
     .btn-save, .btn-excel { min-width: unset; }
@@ -425,6 +428,9 @@
               <th class="col-cant">Cant.</th>
               <th class="col-num">No. Parte / Plano</th>
               <th class="col-uni">Unidad</th>
+              <th class="col-mro-yn">Tiene MRO</th>
+              <th class="col-mro">MRO</th>
+              <th class="col-alta-mro">Alta MRO</th>
               <th class="col-del"></th>
             </tr>
           </thead>
@@ -484,27 +490,23 @@
 <!-- SheetJS para exportar Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-  const STORE_KEY = 'magna_refacciones_v1';
+  // ── URL DEL APPS SCRIPT (reemplazar después de desplegar) ────────────────
+  const SHEETS_URL = 'TU_URL_APPS_SCRIPT_AQUI';
+
+  const STORE_KEY = 'magna_refacciones_v2';
   let records = [];
   let partIdx = 0;
 
   try { records = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch(e) {}
 
-  // ── FOLIO ────────────────────────────────────────────────────────────────
-  function genFolio() {
-    const d = new Date();
-    const yy = String(d.getFullYear()).slice(-2);
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    const n  = String(records.length + 1).padStart(4,'0');
-    return `RF-${yy}${mm}${dd}-${n}`;
-  }
-  function updateFolioDisplay() {
-    document.getElementById('folio-display').textContent = 'Folio: ' + genFolio();
+  // ── FOLIO: el servidor lo genera; aquí solo lo mostramos ─────────────────
+  function updateFolioDisplay(folio) {
+    document.getElementById('folio-display').textContent =
+      folio ? 'Folio: ' + folio : 'Folio: (se asigna al guardar)';
   }
 
   // ── PARTES ───────────────────────────────────────────────────────────────
-  function addPart(desc='', cant='', num='', uni='pieza') {
+  function addPart(desc='', cant='', num='', uni='pieza', tieneMro='', mro='', altaMro='') {
     partIdx++;
     const id = 'pr' + partIdx;
     const tr = document.createElement('tr');
@@ -520,6 +522,21 @@
           <option ${uni==='metro'?'selected':''}>metro</option>
           <option ${uni==='kg'?'selected':''}>kg</option>
           <option ${uni==='litro'?'selected':''}>litro</option>
+        </select>
+      </td>
+      <td class="col-mro-yn">
+        <select>
+          <option value="" ${tieneMro===''?'selected':''}>—</option>
+          <option value="Sí" ${tieneMro==='Sí'?'selected':''}>Sí</option>
+          <option value="No" ${tieneMro==='No'?'selected':''}>No</option>
+        </select>
+      </td>
+      <td class="col-mro"><input type="text" placeholder="Cód. MRO" value="${mro}" /></td>
+      <td class="col-alta-mro">
+        <select>
+          <option value="" ${altaMro===''?'selected':''}>—</option>
+          <option value="Sí" ${altaMro==='Sí'?'selected':''}>Sí</option>
+          <option value="No" ${altaMro==='No'?'selected':''}>No</option>
         </select>
       </td>
       <td class="col-del"><button class="btn-del" onclick="delPart('${id}')" title="Eliminar">✕</button></td>`;
@@ -541,12 +558,19 @@
     const parts = [];
     document.querySelectorAll('#parts-body tr').forEach(tr => {
       const ins = tr.querySelectorAll('input');
-      const sel = tr.querySelector('select');
+      const sels = tr.querySelectorAll('select');
       const desc = ins[0].value.trim();
-      if (desc) parts.push({ descripcion: desc, cantidad: ins[1].value || '1', noPartePlano: ins[2].value.trim(), unidad: sel.value });
+      if (desc) parts.push({
+        descripcion:  desc,
+        cantidad:     ins[1].value || '1',
+        noPartePlano: ins[2].value.trim(),
+        unidad:       sels[0].value,
+        tieneMro:     sels[1].value,
+        mro:          ins[3].value.trim(),
+        altaMro:      sels[2].value
+      });
     });
     return {
-      folio:         genFolio(),
       fecha:         new Date().toLocaleString('es-MX'),
       nombre:        v('nombre'),
       empleado:      v('empleado'),
@@ -585,34 +609,53 @@
   function markErr(id) { document.getElementById(id).classList.add('error'); }
 
   // ── GUARDAR ──────────────────────────────────────────────────────────────
-  const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzQS1xQg9dqH5VjKK0kYDt6yk4gmNOzuIB0sMyzSKdf8ede9kJ8sxx-SiWXhNnPV1w/exec';
+  async function guardar() {
+    const d    = getForm();
+    const errs = validate(d);
+    if (errs.length) { showToast('⚠ Falta: ' + errs.join(', '), 'red'); return; }
 
-async function guardar() {
-  const d = getForm();
-  const errs = validate(d);
-  if (errs.length) { showToast('⚠ Falta: ' + errs.join(', '), 'red'); return; }
+    // Deshabilitar botón mientras se guarda
+    const btnGuardar = document.querySelector('.btn-save');
+    btnGuardar.disabled = true;
+    btnGuardar.textContent = '⏳ Guardando…';
 
-  // Guardar local (como antes)
-  records.push(d);
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
+    try {
+      showToast('⏳ Conectando con Google Sheets…');
 
-  // Enviar a Google Sheets
-  try {
-    showToast('⏳ Guardando en la nube…');
-    await fetch(SHEETS_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(d)
-    });
-    showToast('✓ Solicitud ' + d.folio + ' guardada en Sheets', 'green');
-  } catch(err) {
-    showToast('⚠ Guardado local OK, pero falló la nube', 'red');
+      const resp = await fetch(SHEETS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(d)
+      });
+
+      const json = await resp.json();
+
+      if (json.status === 'ok') {
+        // El folio viene del servidor — único y global
+        d.folio = json.folio;
+        records.push(d);
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
+
+        showToast('✓ Solicitud ' + d.folio + ' guardada en Google Sheets', 'green');
+        renderHistorial();
+        setTimeout(() => { resetForm(); }, 1200);
+      } else {
+        throw new Error(json.mensaje || 'Error desconocido');
+      }
+
+    } catch(err) {
+      // Si el servidor falla, guardar local con folio temporal para no perder el dato
+      const folioLocal = 'LOCAL-' + Date.now();
+      d.folio = folioLocal;
+      records.push(d);
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
+      showToast('⚠ Sin conexión — guardado local (' + folioLocal + ')', 'red');
+      renderHistorial();
+    } finally {
+      btnGuardar.disabled = false;
+      btnGuardar.textContent = '💾 Guardar solicitud';
+    }
   }
-
-  renderHistorial();
-  setTimeout(() => { resetForm(); }, 900);
-}
 
   // ── EXPORT EXCEL ─────────────────────────────────────────────────────────
   function flatRows(recs) {
@@ -636,6 +679,9 @@ async function guardar() {
         'Cantidad':            p.cantidad || '',
         'No. Parte / Plano':   p.noPartePlano || '',
         'Unidad':              p.unidad || '',
+        'Tiene MRO':           p.tieneMro || '',
+        'MRO':                 p.mro || '',
+        'Aplica Alta MRO':     p.altaMro || '',
         'Fecha Requerida':     r.fechaRequerida || '',
         'Autoriza':            r.autoriza || '',
         'Observaciones':       r.observaciones || ''
@@ -654,7 +700,7 @@ async function guardar() {
     }
     const rows = flatRows(toExport);
     const ws = XLSX.utils.json_to_sheet(rows);
-    const widths = [14,18,22,12,20,16,12,14,16,28,22,35,30,9,16,10,14,20,32];
+    const widths = [14,18,22,12,20,16,12,14,16,28,22,35,30,9,16,10,10,16,12,14,20,32];
     ws['!cols'] = widths.map(w => ({ wch: w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Solicitudes');
@@ -687,7 +733,6 @@ async function guardar() {
         </div>
       </div>`;
     }).join('');
-    updateFolioDisplay();
   }
 
   function deleteRecord(idx) {
@@ -695,7 +740,6 @@ async function guardar() {
     records.splice(idx, 1);
     try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
     renderHistorial();
-    updateFolioDisplay();
   }
 
   // ── RESET ─────────────────────────────────────────────────────────────────
@@ -710,7 +754,7 @@ async function guardar() {
     document.getElementById('parts-body').innerHTML = '';
     partIdx = 0;
     updatePartsCount();
-    updateFolioDisplay();
+    updateFolioDisplay();   // sin argumento → muestra "(se asigna al guardar)"
     addPart();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -726,7 +770,7 @@ async function guardar() {
 
   // ── INIT ──────────────────────────────────────────────────────────────────
   document.getElementById('fecha-req').min = new Date().toISOString().split('T')[0];
-  updateFolioDisplay();
+  updateFolioDisplay();   // muestra "(se asigna al guardar)"
   addPart();
   renderHistorial();
 </script>
