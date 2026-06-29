@@ -31,7 +31,6 @@
     padding: 0 0 40px;
   }
 
-  /* ── HEADER ── */
   .site-header {
     background: linear-gradient(135deg, var(--azul) 0%, var(--azul-med) 100%);
     color: white;
@@ -62,7 +61,6 @@
     flex-shrink: 0;
   }
 
-  /* ── LAYOUT ── */
   .container { max-width: 860px; margin: 28px auto; padding: 0 16px; }
 
   .card {
@@ -85,12 +83,10 @@
   .card-header .ico { font-size: 16px; }
   .card-body { padding: 18px 20px 20px; }
 
-  /* ── GRID ── */
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
   .full   { grid-column: 1 / -1; }
 
-  /* ── FIELDS ── */
   .field { display: flex; flex-direction: column; gap: 5px; }
   label  { font-size: 12px; font-weight: 600; color: #374151; }
   label .req { color: var(--rojo); margin-left: 2px; }
@@ -124,7 +120,6 @@
   textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
   select   { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%236b7280' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; }
 
-  /* ── TABLA REFACCIONES ── */
   .parts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .parts-table th {
     background: #f1f5f9;
@@ -181,7 +176,6 @@
   }
   .btn-add-row:hover { background: #dbeafe; }
 
-  /* ── PRIORIDAD BADGES ── */
   .prioridad-info {
     display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
   }
@@ -193,7 +187,6 @@
   .badge-media   { background: #fefce8; color: #713f12; }
   .badge-baja    { background: #dcfce7; color: #14532d; }
 
-  /* ── ACTIONS ── */
   .actions {
     display: flex; gap: 12px; flex-wrap: wrap;
     padding: 18px 20px;
@@ -243,13 +236,11 @@
   }
   .btn-reset:hover { background: #f1f5f9; }
 
-  /* ── CONTADOR ── */
   .parts-count {
     font-size: 11px; color: var(--txt-muted);
     text-align: right; margin-top: 6px;
   }
 
-  /* ── HISTORIAL ── */
   .hist-empty { color: var(--txt-muted); font-size: 13px; font-style: italic; padding: 12px 0; }
   .hist-row {
     display: flex; align-items: center; justify-content: space-between;
@@ -269,7 +260,6 @@
     padding: 4px 10px; font-size: 12px; cursor: pointer;
   }
 
-  /* ── TOAST ── */
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
     background: var(--azul); color: white;
@@ -283,13 +273,11 @@
   .toast.green { background: var(--verde); }
   .toast.red   { background: var(--rojo); }
 
-  /* ── FOOTER ── */
   footer {
     text-align: center; font-size: 11px; color: #9ca3af;
     padding: 20px 0 8px; margin-top: 8px;
   }
 
-  /* ── RESPONSIVE ── */
   @media (max-width: 600px) {
     .site-header { flex-wrap: wrap; }
     .folio-badge { margin-left: 0; width: 100%; text-align: center; }
@@ -363,7 +351,8 @@
       <span>Identificación del troquel</span>
     </div>
     <div class="card-body">
-      <div class="grid-3">
+      <!-- CAMBIO 1: grid-3 → grid-2, sin campo No. Parte (producto) -->
+      <div class="grid-2">
         <div class="field">
           <label>No. Troquel <span class="req">*</span></label>
           <input type="text" id="troquel" placeholder="Ej. TR-2045" />
@@ -371,10 +360,6 @@
         <div class="field">
           <label>Línea / Prensa</label>
           <input type="text" id="linea" placeholder="Ej. L-03 / P-07" />
-        </div>
-        <div class="field">
-          <label>No. Parte (producto)</label>
-          <input type="text" id="parte-prod" placeholder="Ej. 12345678" />
         </div>
       </div>
       <div class="grid-2" style="margin-top:14px">
@@ -487,10 +472,8 @@
 <footer>Magna International · Solicitud de Refacciones de Troqueles · v1.0</footer>
 <div class="toast" id="toast"></div>
 
-<!-- SheetJS para exportar Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-  // ── URL DEL APPS SCRIPT (reemplazar después de desplegar) ────────────────
   const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz19KeOa6IcMIFNv2FoNkLozeuR92KT92Z8lA0hDVYmU4dEw3ncuuzpDnsWsErjy8s/exec';
 
   const STORE_KEY = 'magna_refacciones_v2';
@@ -499,13 +482,11 @@
 
   try { records = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch(e) {}
 
-  // ── FOLIO: el servidor lo genera; aquí solo lo mostramos ─────────────────
   function updateFolioDisplay(folio) {
     document.getElementById('folio-display').textContent =
       folio ? 'Folio: ' + folio : 'Folio: (se asigna al guardar)';
   }
 
-  // ── PARTES ───────────────────────────────────────────────────────────────
   function addPart(desc='', cant='', num='', uni='pieza', tieneMro='', mro='', altaMro='') {
     partIdx++;
     const id = 'pr' + partIdx;
@@ -553,7 +534,6 @@
     document.getElementById('parts-count').textContent = n + (n === 1 ? ' refacción' : ' refacciones');
   }
 
-  // ── DATOS FORMULARIO ─────────────────────────────────────────────────────
   function getForm() {
     const parts = [];
     document.querySelectorAll('#parts-body tr').forEach(tr => {
@@ -578,7 +558,7 @@
       turno:         v('turno'),
       troquel:       v('troquel'),
       linea:         v('linea'),
-      parteProducto: v('parte-prod'),
+      // CAMBIO 2: eliminado parteProducto
       tipoSolicitud: v('tipo'),
       prioridad:     v('prioridad'),
       descripcion:   v('descripcion'),
@@ -590,7 +570,6 @@
   }
   function v(id) { return document.getElementById(id).value.trim(); }
 
-  // ── VALIDACIÓN ───────────────────────────────────────────────────────────
   const required = ['nombre','empleado','depto','turno','troquel','tipo','prioridad'];
   function clearErrors() { required.forEach(id => document.getElementById(id).classList.remove('error')); }
   function validate(d) {
@@ -608,7 +587,6 @@
   }
   function markErr(id) { document.getElementById(id).classList.add('error'); }
 
-  // ── GUARDAR (JSONP — sin problemas de CORS) ──────────────────────────────
   function guardar() {
     const d    = getForm();
     const errs = validate(d);
@@ -619,10 +597,8 @@
     btnGuardar.textContent = '⏳ Guardando…';
     showToast('⏳ Conectando con Google Sheets…');
 
-    // Nombre único de callback para esta petición
     const cbName = 'cb_' + Date.now();
 
-    // Timeout de seguridad — si en 12 s no responde, guardamos local
     const timer = setTimeout(() => {
       cleanup();
       const folioLocal = 'LOCAL-' + Date.now();
@@ -633,7 +609,6 @@
       btnGuardar.textContent = '💾 Guardar solicitud';
     }, 12000);
 
-    // Función que Apps Script llama con la respuesta
     window[cbName] = function(resp) {
       cleanup();
       clearTimeout(timer);
@@ -655,7 +630,6 @@
       }
     };
 
-    // Inyectar <script> con la petición JSONP
     const script = document.createElement('script');
     script.id  = 'jsonp_' + cbName;
     script.src = SHEETS_URL
@@ -686,7 +660,6 @@
     try { localStorage.setItem(STORE_KEY, JSON.stringify(records)); } catch(e) {}
   }
 
-  // ── EXPORT EXCEL ─────────────────────────────────────────────────────────
   function flatRows(recs) {
     const rows = [];
     recs.forEach(r => {
@@ -700,7 +673,7 @@
         'Turno':               r.turno,
         'No. Troquel':         r.troquel,
         'Línea / Prensa':      r.linea || '',
-        'No. Parte Producto':  r.parteProducto || '',
+        // CAMBIO 3: eliminada columna 'No. Parte Producto'
         'Tipo de Solicitud':   r.tipoSolicitud,
         'Prioridad':           r.prioridad,
         'Descripción Problema':r.descripcion || '',
@@ -729,7 +702,7 @@
     }
     const rows = flatRows(toExport);
     const ws = XLSX.utils.json_to_sheet(rows);
-    const widths = [14,18,22,12,20,16,12,14,16,28,22,35,30,9,16,10,10,16,12,14,20,32];
+    const widths = [14,18,22,12,20,16,12,14,28,22,35,30,9,16,10,10,16,12,14,20,32];
     ws['!cols'] = widths.map(w => ({ wch: w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Solicitudes');
@@ -738,7 +711,6 @@
     showToast('✓ Excel descargado (' + toExport.length + ' solicitud' + (toExport.length > 1 ? 'es' : '') + ')', 'green');
   }
 
-  // ── HISTORIAL ─────────────────────────────────────────────────────────────
   function renderHistorial() {
     const el = document.getElementById('historial-body');
     if (!records.length) {
@@ -771,9 +743,9 @@
     renderHistorial();
   }
 
-  // ── RESET ─────────────────────────────────────────────────────────────────
   function resetForm() {
-    ['nombre','empleado','linea','parte-prod','troquel','descripcion','fecha-req','autoriza','obs'].forEach(id => {
+    // CAMBIO 4: eliminado 'parte-prod' del array de reset
+    ['nombre','empleado','linea','troquel','descripcion','fecha-req','autoriza','obs'].forEach(id => {
       document.getElementById(id).value = '';
     });
     ['depto','turno','tipo','prioridad'].forEach(id => {
@@ -783,12 +755,11 @@
     document.getElementById('parts-body').innerHTML = '';
     partIdx = 0;
     updatePartsCount();
-    updateFolioDisplay();   // sin argumento → muestra "(se asigna al guardar)"
+    updateFolioDisplay();
     addPart();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ── TOAST ─────────────────────────────────────────────────────────────────
   function showToast(msg, type='') {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -797,9 +768,8 @@
     t._timer = setTimeout(() => { t.className = 'toast'; }, 3000);
   }
 
-  // ── INIT ──────────────────────────────────────────────────────────────────
   document.getElementById('fecha-req').min = new Date().toISOString().split('T')[0];
-  updateFolioDisplay();   // muestra "(se asigna al guardar)"
+  updateFolioDisplay();
   addPart();
   renderHistorial();
 </script>
