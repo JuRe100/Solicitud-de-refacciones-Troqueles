@@ -131,6 +131,7 @@
     padding: 8px 10px;
     border-bottom: 1.5px solid var(--gris-borde);
     text-align: left;
+    white-space: nowrap;
   }
   .parts-table td { padding: 5px 5px; vertical-align: middle; }
   .parts-table tr:not(:last-child) td { border-bottom: 1px solid #f1f5f9; }
@@ -139,14 +140,23 @@
     padding: 7px 9px;
     border-radius: 7px;
   }
-  .parts-table .col-desc     { width: 28%; }
-  .parts-table .col-cant     { width: 7%; }
-  .parts-table .col-num      { width: 15%; }
-  .parts-table .col-uni      { width: 10%; }
-  .parts-table .col-mro-yn  { width: 10%; }
-  .parts-table .col-mro      { width: 13%; }
-  .parts-table .col-alta-mro { width: 10%; }
-  .parts-table .col-del      { width: 7%; text-align: center; }
+  .parts-table .col-desc     { min-width: 160px; width: 28%; }
+  .parts-table .col-cant     { min-width: 55px;  width: 7%; }
+  .parts-table .col-num      { min-width: 110px; width: 15%; }
+  .parts-table .col-uni      { min-width: 80px;  width: 10%; }
+  .parts-table .col-mro-yn   { min-width: 80px;  width: 10%; }
+  .parts-table .col-mro      { min-width: 100px; width: 13%; }
+  .parts-table .col-alta-mro { min-width: 80px;  width: 10%; }
+  .parts-table .col-del      { min-width: 44px;  width: 7%; text-align: center; }
+
+  /* Indicador de scroll en móvil */
+  .table-scroll-hint {
+    display: none;
+    font-size: 11px;
+    color: var(--txt-muted);
+    text-align: right;
+    margin-bottom: 4px;
+  }
 
   .btn-del {
     background: #fff0f0;
@@ -283,11 +293,12 @@
     .folio-badge { margin-left: 0; width: 100%; text-align: center; }
     .grid-2, .grid-3 { grid-template-columns: 1fr; }
     .full { grid-column: 1; }
-    .parts-table .col-num, .parts-table .col-mro-yn, .parts-table .col-mro, .parts-table .col-alta-mro { display: none; }
-    .parts-table th:nth-child(3), .parts-table td:nth-child(3) { display: none; }
     .actions { flex-direction: column; }
     .btn-save, .btn-excel { min-width: unset; }
     .card-body { padding: 14px 14px 16px; }
+    /* Tabla con scroll horizontal — todas las columnas visibles */
+    .table-scroll-hint { display: block; }
+    .parts-table input, .parts-table select { min-width: 70px; }
   }
 </style>
 </head>
@@ -351,7 +362,6 @@
       <span>Identificación del troquel</span>
     </div>
     <div class="card-body">
-      <!-- CAMBIO 1: grid-3 → grid-2, sin campo No. Parte (producto) -->
       <div class="grid-2">
         <div class="field">
           <label>No. Troquel <span class="req">*</span></label>
@@ -405,6 +415,7 @@
       <span>Refacciones solicitadas <span class="req">*</span></span>
     </div>
     <div class="card-body">
+      <p class="table-scroll-hint">← Desliza para ver todos los campos →</p>
       <div style="overflow-x:auto;">
         <table class="parts-table">
           <thead>
@@ -558,7 +569,6 @@
       turno:         v('turno'),
       troquel:       v('troquel'),
       linea:         v('linea'),
-      // CAMBIO 2: eliminado parteProducto
       tipoSolicitud: v('tipo'),
       prioridad:     v('prioridad'),
       descripcion:   v('descripcion'),
@@ -673,7 +683,6 @@
         'Turno':               r.turno,
         'No. Troquel':         r.troquel,
         'Línea / Prensa':      r.linea || '',
-        // CAMBIO 3: eliminada columna 'No. Parte Producto'
         'Tipo de Solicitud':   r.tipoSolicitud,
         'Prioridad':           r.prioridad,
         'Descripción Problema':r.descripcion || '',
@@ -744,7 +753,6 @@
   }
 
   function resetForm() {
-    // CAMBIO 4: eliminado 'parte-prod' del array de reset
     ['nombre','empleado','linea','troquel','descripcion','fecha-req','autoriza','obs'].forEach(id => {
       document.getElementById(id).value = '';
     });
