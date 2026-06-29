@@ -149,7 +149,6 @@
   .parts-table .col-alta-mro { min-width: 80px;  width: 10%; }
   .parts-table .col-del      { min-width: 44px;  width: 7%; text-align: center; }
 
-  /* Indicador de scroll en móvil */
   .table-scroll-hint {
     display: none;
     font-size: 11px;
@@ -296,7 +295,6 @@
     .actions { flex-direction: column; }
     .btn-save, .btn-excel { min-width: unset; }
     .card-body { padding: 14px 14px 16px; }
-    /* Tabla con scroll horizontal — todas las columnas visibles */
     .table-scroll-hint { display: block; }
     .parts-table input, .parts-table select { min-width: 70px; }
   }
@@ -370,6 +368,11 @@
         <div class="field">
           <label>Línea / Prensa</label>
           <input type="text" id="linea" placeholder="Ej. L-03 / P-07" />
+        </div>
+        <!-- ✅ CAMPO NUEVO: Operación -->
+        <div class="field">
+          <label>Operación</label>
+          <input type="text" id="operacion" placeholder="Ej. Corte, Doblez, Embutido…" />
         </div>
       </div>
       <div class="grid-2" style="margin-top:14px">
@@ -591,7 +594,7 @@
   function getForm() {
     const parts = [];
     document.querySelectorAll('#parts-body tr').forEach(tr => {
-      const ins = tr.querySelectorAll('input');
+      const ins  = tr.querySelectorAll('input');
       const sels = tr.querySelectorAll('select');
       const desc = ins[0].value.trim();
       if (desc) parts.push({
@@ -605,20 +608,21 @@
       });
     });
     return {
-      fecha:         new Date().toLocaleString('es-MX'),
-      nombre:        v('nombre'),
-      empleado:      v('empleado'),
-      departamento:  v('depto'),
-      turno:         v('turno'),
-      troquel:       v('troquel'),
-      linea:         v('linea'),
-      tipoSolicitud: v('tipo'),
-      prioridad:     v('prioridad'),
-      descripcion:   v('descripcion'),
-      fechaRequerida:v('fecha-req'),
-      autoriza:      v('autoriza'),
-      observaciones: v('obs'),
-      refacciones:   parts
+      fecha:          new Date().toLocaleString('es-MX'),
+      nombre:         v('nombre'),
+      empleado:       v('empleado'),
+      departamento:   v('depto'),
+      turno:          v('turno'),
+      troquel:        v('troquel'),
+      linea:          v('linea'),
+      operacion:      v('operacion'),   // ✅ NUEVO
+      tipoSolicitud:  v('tipo'),
+      prioridad:      v('prioridad'),
+      descripcion:    v('descripcion'),
+      fechaRequerida: v('fecha-req'),
+      autoriza:       v('autoriza'),
+      observaciones:  v('obs'),
+      refacciones:    parts
     };
   }
   function v(id) { return document.getElementById(id).value.trim(); }
@@ -628,13 +632,13 @@
   function validate(d) {
     clearErrors();
     const errors = [];
-    if (!d.nombre)       { markErr('nombre');   errors.push('Nombre del solicitante'); }
-    if (!d.empleado)     { markErr('empleado'); errors.push('No. de empleado'); }
-    if (!d.departamento) { markErr('depto');    errors.push('Departamento'); }
-    if (!d.turno)        { markErr('turno');    errors.push('Turno'); }
-    if (!d.troquel)      { markErr('troquel');  errors.push('No. de troquel'); }
-    if (!d.tipoSolicitud){ markErr('tipo');     errors.push('Tipo de solicitud'); }
-    if (!d.prioridad)    { markErr('prioridad');errors.push('Prioridad'); }
+    if (!d.nombre)        { markErr('nombre');   errors.push('Nombre del solicitante'); }
+    if (!d.empleado)      { markErr('empleado'); errors.push('No. de empleado'); }
+    if (!d.departamento)  { markErr('depto');    errors.push('Departamento'); }
+    if (!d.turno)         { markErr('turno');    errors.push('Turno'); }
+    if (!d.troquel)       { markErr('troquel');  errors.push('No. de troquel'); }
+    if (!d.tipoSolicitud) { markErr('tipo');     errors.push('Tipo de solicitud'); }
+    if (!d.prioridad)     { markErr('prioridad');errors.push('Prioridad'); }
     if (!d.refacciones.length) errors.push('Al menos una refacción');
     return errors;
   }
@@ -718,27 +722,28 @@
     recs.forEach(r => {
       const parts = r.refacciones && r.refacciones.length ? r.refacciones : [{}];
       parts.forEach(p => rows.push({
-        'Folio':               r.folio,
-        'Fecha Solicitud':     r.fecha,
-        'Nombre':              r.nombre,
-        'No. Empleado':        r.empleado,
-        'Departamento':        r.departamento,
-        'Turno':               r.turno,
-        'No. Troquel':         r.troquel,
-        'Línea / Prensa':      r.linea || '',
-        'Tipo de Solicitud':   r.tipoSolicitud,
-        'Prioridad':           r.prioridad,
-        'Descripción Problema':r.descripcion || '',
-        'Desc. Refacción':     p.descripcion || '',
-        'Cantidad':            p.cantidad || '',
-        'No. Parte / Plano':   p.noPartePlano || '',
-        'Unidad':              p.unidad || '',
-        'Tiene MRO':           p.tieneMro || '',
-        'MRO':                 p.mro || '',
-        'Aplica Alta MRO':     p.altaMro || '',
-        'Fecha Requerida':     r.fechaRequerida || '',
-        'Autoriza':            r.autoriza || '',
-        'Observaciones':       r.observaciones || ''
+        'Folio':                r.folio,
+        'Fecha Solicitud':      r.fecha,
+        'Nombre':               r.nombre,
+        'No. Empleado':         r.empleado,
+        'Departamento':         r.departamento,
+        'Turno':                r.turno,
+        'No. Troquel':          r.troquel,
+        'Línea / Prensa':       r.linea || '',
+        'Operación':            r.operacion || '',   // ✅ NUEVO
+        'Tipo de Solicitud':    r.tipoSolicitud,
+        'Prioridad':            r.prioridad,
+        'Descripción Problema': r.descripcion || '',
+        'Desc. Refacción':      p.descripcion || '',
+        'Cantidad':             p.cantidad || '',
+        'No. Parte / Plano':    p.noPartePlano || '',
+        'Unidad':               p.unidad || '',
+        'Tiene MRO':            p.tieneMro || '',
+        'MRO':                  p.mro || '',
+        'Aplica Alta MRO':      p.altaMro || '',
+        'Fecha Requerida':      r.fechaRequerida || '',
+        'Autoriza':             r.autoriza || '',
+        'Observaciones':        r.observaciones || ''
       }));
     });
     return rows;
@@ -754,7 +759,7 @@
     }
     const rows = flatRows(toExport);
     const ws = XLSX.utils.json_to_sheet(rows);
-    const widths = [14,18,22,12,20,16,12,14,28,22,35,30,9,16,10,10,16,12,14,20,32];
+    const widths = [14,18,22,12,20,16,12,14,16,28,22,35,30,9,16,10,10,16,12,14,20,32];
     ws['!cols'] = widths.map(w => ({ wch: w }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Solicitudes');
@@ -796,7 +801,7 @@
   }
 
   function resetForm() {
-    ['nombre','empleado','linea','troquel','descripcion','fecha-req','autoriza','obs'].forEach(id => {
+    ['nombre','empleado','linea','operacion','troquel','descripcion','fecha-req','autoriza','obs'].forEach(id => {
       document.getElementById(id).value = '';
     });
     ['depto','turno','tipo','prioridad'].forEach(id => {
