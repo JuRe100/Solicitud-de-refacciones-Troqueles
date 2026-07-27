@@ -531,7 +531,6 @@
 <footer>Magna International · Solicitud de Refacciones de Troqueles · v1.0</footer>
 <div class="toast" id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz19KeOa6IcMIFNv2FoNkLozeuR92KT92Z8lA0hDVYmU4dEw3ncuuzpDnsWsErjy8s/exec';
 
@@ -751,6 +750,20 @@
     return rows;
   }
 
+  let xlsxLoading = null;
+  function loadXlsxLib() {
+    if (window.XLSX) return Promise.resolve();
+    if (xlsxLoading) return xlsxLoading;
+    xlsxLoading = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('No se pudo cargar la librería de Excel'));
+      document.body.appendChild(script);
+    });
+    return xlsxLoading;
+  }
+
   function exportExcel() {
     let toExport = records.length ? records : null;
     if (!toExport) {
@@ -759,15 +772,21 @@
       if (errs.length) { showToast('⚠ Guarda primero una solicitud o llena el formulario', 'red'); return; }
       toExport = [d];
     }
-    const rows = flatRows(toExport);
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const widths = [14,18,22,12,20,16,12,14,16,28,22,35,30,9,16,10,10,16,12,14,20,32];
-    ws['!cols'] = widths.map(w => ({ wch: w }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Solicitudes');
-    const fecha = new Date().toISOString().slice(0,10);
-    XLSX.writeFile(wb, `Refacciones_Troqueles_${fecha}.xlsx`);
-    showToast('✓ Excel descargado (' + toExport.length + ' solicitud' + (toExport.length > 1 ? 'es' : '') + ')', 'green');
+
+    showToast('⏳ Preparando Excel…');
+    loadXlsxLib().then(() => {
+      const rows = flatRows(toExport);
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const widths = [14,18,22,12,20,16,12,14,16,28,22,35,30,9,16,10,10,16,12,14,20,32];
+      ws['!cols'] = widths.map(w => ({ wch: w }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Solicitudes');
+      const fecha = new Date().toISOString().slice(0,10);
+      XLSX.writeFile(wb, `Refacciones_Troqueles_${fecha}.xlsx`);
+      showToast('✓ Excel descargado (' + toExport.length + ' solicitud' + (toExport.length > 1 ? 'es' : '') + ')', 'green');
+    }).catch(() => {
+      showToast('⚠ No se pudo descargar el Excel (sin acceso al CDN en esta red)', 'red');
+    });
   }
 
   function renderHistorial() {
